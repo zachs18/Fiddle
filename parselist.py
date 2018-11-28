@@ -24,21 +24,21 @@ class FListParser(FParserSingleton):
 			end = ']'
 			newline = '\n'
 		else:
-			start = b'['[0]
-			end = b']'[0]
-			newline = b'\n'[0]
-		if s[0] != start:
+			start = b'['
+			end = b']'
+			newline = b'\n'
+		if not s.startswith(start):
 			return [], 0
-		length = 1
-		s = s[1:]
+		length = len(start)
+		s = s[len(start):]
 		tokens = []
-		while s and s[0] != end and s[0] != newline:
+		while s and (not s.startswith(end)) and (not s.startswith(newline)):
 			toks, leng, s = parse_one(s)
 			length += leng
 			tokens += toks
-		if s and s[0] == end: # newlines are not 'eaten', closing brackets are
-			length += 1
-			s = s[1:]
+		if s and s.startswith(end): # newlines are not 'eaten', closing brackets are
+			length += len(end)
+			s = s[len(end):]
 		return tokens, length
 	@classmethod
 	def match(cls, s):

@@ -66,7 +66,7 @@ def main(argv):
 			state.argv = args
 			#
 		else:
-			infile = open(args[0], encoding or 'rb')
+			infile = open(args[0], encoding or "rb")
 			state.argv = args[1:]
 		source = infile.read()
 		infile.close()

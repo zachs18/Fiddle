@@ -56,40 +56,40 @@ class FUnicodeParser(FParserSingleton):
 			end = '"'
 			newline = '\n'
 			escape = '\\'
-			if s[0] != start:
+			if not s.startswith(start):
 				return [], 0
-			length = 1
-			s = s[1:]
+			length = len(start)
+			s = s[len(start):]
 			tokens = []
-			while s and s[0] != end and s[0] != newline:
+			while s and (not s.startswith(end)) and (not s.startswith(newline)):
 				#print(s)
-				if s[0] != escape:
+				if not s.startswith(escape):
 					tokens.append(FCharToken(s[0]))
 					s = s[1:]
 					length += 1
 				else:
-					if not s[1:]: # no more characters
+					s = s[len(escape):]
+					s += len(escape)
+					if not s: # no more characters
 						tokens.append(FCharToken(escape))
-						length += 1
-					elif s[1] == '\n': # pass
-						s = s[2:]
-						length += 2
-					elif s[1] == 'n':
-						tokens.append(FCharToken('\n'))
-						s = s[2:]
-						length += 2
-					elif s[1] == end:
-						tokens.append(FCharToken(end))
-						s = s[2:]
-						length += 2
-					else:
-						tokens.append(FCharToken(escape))
+					elif s.startswith('\n'): # pass
 						s = s[1:]
 						length += 1
-						continue
-			if s and s[0] == end: # newlines are not 'eaten', closing quotes are
-				length += 1
-				s = s[1:]
+					elif s.startswith('n'):
+						tokens.append(FCharToken('\n'))
+						s = s[1:]
+						length += 1
+					elif s.startswith(end):
+						tokens.append(FCharToken(end))
+						s = s[len(end):]
+						length += len(end)
+					else:
+						tokens.append(FCharToken(escape))
+						s = s[len(escape):]
+						length += len(escape)
+			if s and s.startswith(end): # newlines are not 'eaten', closing quotes are
+				length += len(end)
+				s = s[len(end):]
 			return tokens, length
 						
 		else:

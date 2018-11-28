@@ -57,7 +57,7 @@ class FRotateParser(FParserSingleton):
 			else:
 				return None, 1
 		else:
-			if s[0] != b'r'[0]:
+			if not s.startswith(b'r'):
 				return None, 0
 			else:
 				import int_rep
@@ -115,12 +115,12 @@ class FFlipParser(FParserSingleton):
 	@classmethod
 	def _match(cls, s):
 		if isinstance(s, str):
-			if s[0] != 'f':
+			if not s.startswith('f'):
 				return None, 0
 			else:
 				return None, 1
 		else:
-			if s[0] != b'f'[0]:
+			if not s.startswith(b'f'):
 				return None, 0
 			else:
 				import int_rep
@@ -147,7 +147,7 @@ class FFlipParser(FParserSingleton):
 		flip, length = cls._match(s)
 		if not length:
 			raise ValueError
-		return FRotateCommandToken('f', flip), length
+		return FFlipCommandToken('f', flip), length
 	
 
 class FFlipCommandToken(FCommandToken):
@@ -155,20 +155,20 @@ class FFlipCommandToken(FCommandToken):
 		self.name = name
 		self.flip = flip
 	def apply(self, stack):
-		if self.flip == 0:
-			count = stack.length()
-		elif self.flip is not None:
+		if self.flip is not None:
 			count = self.flip
 		else:
 			count = int(stack.pop())
+		if count == 0:
+			count = len(stack)
 		if count < 0:
 			raise ValueError(count)
-		if count < float('inf'):
+		elif count < float('inf'):
 			items = stack.popn(count)[::-1]
 			for item in items:
 				stack.push(item)
 		else:
 			raise ValueError("cannot (yet) flip infinite stack")
 	def __repr__(self):
-		return "FRotateCommandToken(%s, %r))" % (self.name, self.rotate)
+		return "FFlipCommandToken(%s, %r))" % (self.name, self.rotate)
 	

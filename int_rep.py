@@ -25,6 +25,7 @@
 11111111 could be from stack, or could use a command prefix to say from stack
 """
 import re
+from typing import Tuple
 
 int_rep_b_re = re.compile(
 	b"""
@@ -43,7 +44,7 @@ int_rep_b_re = re.compile(
 	
 
 
-def int_to_bytes(i):
+def int_to_bytes(i: int) -> bytes:
 	_i = i
 	length = 1
 	while i.bit_length() > 7*length: # i > 2**(7*length)
@@ -52,9 +53,10 @@ def int_to_bytes(i):
 	if length > 8:
 		raise ValueError(_i)
 	bs = i.to_bytes(length, 'big')
-	head = bs[0] + sum(2**(8-j) for j in range(1,length))
+	#head = bs[0] + sum(2**(8-j) for j in range(1,length))
+	head = bs[0] + 256 - 2**(8-length+1)
 	return bytes([head]) + bs[1:]
-def bytes_to_int(bs):
+def bytes_to_int(bs: bytes) -> int:
 	head = bs[0]
 	for i in range(9):
 		if head >= 256-2**i:
@@ -71,25 +73,25 @@ def bytes_to_int(bs):
 def Tr(x):
 	return x*(x+1)//2
 #import math
-def sqrt(n):
+def int_sqrt(n):
 	if n < 0:
 		raise ValueError('sqrt of a negative number')
 	x = n
 	y = n >> 1 or 1
 	while y < x:
-		print(x,y)
+		#print(x,y)
 		x, y = y, (y + n//y)//2
-	print(x,y)
+	#print(x,y)
 	return x
 def Tr_inv(x):
-	return (-1 + sqrt(1+8*x))//2
+	return (-1 + int_sqrt(1+8*x))//2
 
 rot_cmd = b'r'
-def rot_to_int(count, times):
+def rot_to_int(count: int, times: int) -> int:
 #	return sum(range(count-1)) + times - 1
 	return (count-2)*(count-1)//2 + times - 1
 #	return Tr(count-2) + times - 1
-def rot_to_bytes(count, times):
+def rot_to_bytes(count: int, times: int) -> bytes:
 	out = rot_cmd # or whatever rotate command
 	_num = num = rot_to_int(count, times)
 	length = 1
@@ -110,7 +112,7 @@ def rot_to_bytes(count, times):
 #		num -= (i-1) # the nth count has n-1 possible timeses
 #		i += 1
 #	return i, num
-def int_to_rot(num):
+def int_to_rot(num: int) -> Tuple[int, int]:
 	#num += 1 # otherwise itr(0) returns (1,0)
 	i = Tr_inv(num)
 	num -= Tr(i)
@@ -118,20 +120,20 @@ def int_to_rot(num):
 	#print(Tr_inv(num))
 #	print(i)
 #	print(num)
-	while i < num: # for residual float errors from math.sqrt
-		print(1,end='')
-		num -= i
-		i += 1
-	while num < 1: # for residual float errors from math.sqrt
-		# when num is originally > about 2**105
-		#print(2,end='')
-		i -= 1
-		num += i
+#	while i < num: # for residual float errors from math.sqrt
+#		print(1,end='')
+#		num -= i
+#		i += 1
+#	while num < 1: # for residual float errors from math.sqrt
+#		# when num is originally > about 2**105
+#		#print(2,end='')
+#		i -= 1
+#		num += i
 	return i+2, num+1
-def bytes_to_rot(bs):
+def bytes_to_rot(bs: bytes) -> Tuple[int, int]:
 	if not bs.startswith(rot_cmd):
 		raise ValueError
-	bs = bs.lstrip(rot_cmd)
+	bs = bs[len(rot_cmd):]
 	num = 0
 	length = 1
 	mask = 128

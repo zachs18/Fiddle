@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 import re
+from typing import Tuple, List, AnyStr
 
 
 
@@ -10,6 +11,8 @@ class FToken(ABC):
 	@abstractmethod
 	def apply(self, stack):
 		pass
+
+
 
 parsers = []
 
@@ -22,10 +25,10 @@ class FParser(ABC):
 	def __init__(self):
 		pass
 	@abstractmethod
-	def match(self, s):
+	def match(self, s: AnyStr) -> int:
 		return 0 # length/number of bytes/characters used
 	@abstractmethod
-	def parse(self, s):
+	def parse(self, s: AnyStr) -> Tuple[List[FToken], int]:
 		return [], 0 # 1 token or list of 0,2+ tokens, bytes/characters used
 
 class FParserFactory(ABC):
