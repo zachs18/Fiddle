@@ -23,7 +23,7 @@ class FNumberParser(FParser):
 		self.parser = parser
 	def _match(self, s):
 		for r in self.regexes:
-			if isinstance(s, type(r.pattern)):
+			if isinstance(s, type(r.pattern)): # Don't try to match a str to a bytes re & vice versa
 				match = r.match(s)
 				if match:
 					return match
@@ -83,7 +83,7 @@ def ten_power_parser(match):
 #  0: (-)? : '-' or None
 #     0b/0/0x : base prefix
 #  1: <digits> : decimal and octal cannot start with 0, binary and hex can
-#     (?!<digit>) : make sure the parser doesn't stop short (non-capturing group) #TODO: not needed
+#     (?!<digit>) : make sure the parser doesn't stop short (non-capturing group) #TODO: not needed, parser is greedy
 #  2: (e([+-]?\d+)) : scientific-notation exponent
 #  3:   ([+-]?\d+) : the actual number for the power
 def nrp_parser(match, base):

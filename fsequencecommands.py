@@ -34,12 +34,17 @@ def arith_start_step(a, b):
 	else:
 		raise TypeError(a if not isinstance(a, FNumber) else b)
 		
-@FCommandParserFactory('↠', 2, 1)
-def arith_step_end(a, b):
-	if isinstance(a, FComplex) or isinstance(b, FComplex):
-		return FList(FArithmeticComplexSequence(step=a, end=b))
-	elif isinstance(a, FNumber) and isinstance(b, FNumber):
-		return FList(FArithmeticSequence(step=a, end=b))
+@FCommandParserFactory('↠', 3, 1)
+def arith_start_end_step(a, b, c):
+	if isinstance(a, FComplex) or isinstance(b, FComplex) or isinstance(c, FComplex):
+		return FList(FArithmeticComplexSequence(start=a, end=b, step=c))
+	elif isinstance(a, FNumber) and isinstance(b, FNumber) and isinstance(c, FNumber):
+		return FList(FArithmeticSequence(start=a, end=b, step=c))
 	else:
-		raise TypeError(a if not isinstance(a, FNumber) else b)
+		raise TypeError(a if not isinstance(a, FNumber) else b if not isinstance(b, FNumber) else c)
+
+@FCommandParserFactory('⇶', 0, 1)
+def arith_zero_up():
+	return FList(FArithmeticSequence())
+
 

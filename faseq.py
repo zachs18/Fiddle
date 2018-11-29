@@ -10,7 +10,7 @@ class FArithmeticSequence(FIterator):
 	If end is None, the sequence is infinite.
 	If end is not None, the sequence will be bounded by it (end will not be part of the sequence)
 	"""
-	def __init__(self, start=None, end=None, step=None, *, _current=None, call=FNumber):
+	def __init__(self, start=None, end=None, step=None, *, _current=None, call=FNumber, inclusive=False):
 		if start is None:
 			start = 0
 		
@@ -36,6 +36,7 @@ class FArithmeticSequence(FIterator):
 		self._inf = (end is None)
 		self._current = self.start if _current is None else _current # for copying
 		self.call = call
+		self.inclusive = inclusive
 	def __next__(self):
 		#print(self.start, self.end, self.step, self._current, self._inf)
 		if self.end is None:
@@ -44,26 +45,32 @@ class FArithmeticSequence(FIterator):
 			return self.call(ret)
 		else:
 			if self.step > 0:
-				if self._current >= self.end:
+				if self._current > self.end or (not self.inclusive and self._current == self.end):
 					raise StopIteration
 				ret = self._current
 				self._current += self.step
 				return self.call(ret)
 			else:
-				if self._current <= self.end:
+				if self._current < self.end or (not self.inclusive and self._current == self.end):
 					raise StopIteration
 				ret = self._current
 				self._current += self.step
 				return self.call(ret)
 	def copy(self):
-		return type(self)(self.start, self.end, self.step, _current=self._current, call=self.call)
+		return type(self)(self.start, self.end, self.step, _current=self._current, call=self.call, inclusive=self.inclusive)
 
 class FArithmeticComplexSequence(FArithmeticSequence):
 	"""
 	Bounding is done by absolute value.
-	
+	TODO: If abs(start)>abs(end) it can jump over end's circle, it will keep going until it reached start's circle again
+		i.e. start=6, end=1, step=-4
+		[0] 6
+		[1] 2
+		# skipped over end's circle
+		[2] -2
+		[3] -6 # only if inclusive
 	"""
-	def __init__(self, start=None, end=None, step=None, *, _current=None, call=FNumber):
+	def __init__(self, start=None, end=None, step=None, *, _current=None, call=FNumber, inclusive=False):
 		if start is not None and not isinstance(start, FNumber):
 			start = FNumber(start)
 		if end is not None and not isinstance(end, FNumber):
@@ -99,6 +106,7 @@ class FArithmeticComplexSequence(FArithmeticSequence):
 		self._inf = (end is None)
 		self._current = self.start if _current is None else _current # for copying
 		self.call = call
+		self.inclusive = inclusive
 	def __next__(self):
 		#print(self.start, self.end, self.step, self._current, self._inf)
 		if self.end is None:
@@ -107,13 +115,14 @@ class FArithmeticComplexSequence(FArithmeticSequence):
 			return self.call(ret)
 		else:
 			if self.start.norm() < self.end.norm(): # norm to avoid float precision issues if the components arent floats
-				if abs(self._current) >= abs(self.end):
+				if self._current.norm() > self.end.norm() or (not self.inclusive and self._current.norm() == self.end.norm()):
 					raise StopIteration
 				ret = self._current
 				self._current += self.step
 				return self.call(ret)
 			else:
-				if self._current.norm() <= self.end.norm() or (self._current != self.start and self._current.norm() >= self.start.norm()):
+				if self._current.norm() < self.end.norm() or (not self.inclusive and self._current.norm() == self.end.norm()) or \
+					(self._current != self.start and (self._current.norm() > self.start.norm() or (not self.inclusive and self._current.norm() == self.start.norm()))):
 					raise StopIteration
 				ret = self._current
 				self._current += self.step
