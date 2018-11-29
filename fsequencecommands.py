@@ -34,7 +34,7 @@ def arith_start_step(a, b):
 	else:
 		raise TypeError(a if not isinstance(a, FNumber) else b)
 		
-@FCommandParserFactory('↦', 2, 1)
+@FCommandParserFactory('↠', 2, 1)
 def arith_step_end(a, b):
 	if isinstance(a, FComplex) or isinstance(b, FComplex):
 		return FList(FArithmeticComplexSequence(step=a, end=b))
