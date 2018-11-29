@@ -53,7 +53,10 @@ class FCommandParserFactory(FParserFactory):
 		self.argc = argc # argument count
 		self.retc = retc # return count
 	def __call__(self, func):
-		cmd = FCommandParser(self.name, func, call=(CallType.basic, self.argc, self.retc))
+		if isinstance(func, FCommandParser):
+			cmd = FCommandParser(self.name, func.func, call=(CallType.basic, self.argc, self.retc))
+		else:
+			cmd = FCommandParser(self.name, func, call=(CallType.basic, self.argc, self.retc))
 		commands[self.name] = cmd
 		return cmd
 
@@ -68,7 +71,10 @@ class FStackCommandParserFactory(FParserFactory):
 	def __init__(self, name):
 		self.name = name
 	def __call__(self, func):
-		cmd = FCommandParser(self.name, func, call=(CallType.stack,))
+		if isinstance(func, FCommandParser):
+			cmd = FCommandParser(self.name, func.func, call=(CallType.stack,))
+		else:
+			cmd = FCommandParser(self.name, func, call=(CallType.stack,))
 		commands[self.name] = cmd
 		return cmd
 
