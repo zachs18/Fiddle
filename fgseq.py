@@ -3,6 +3,7 @@ from fractions import Fraction
 
 from fiter import FIterator
 import fnumeric
+from fnumeric import FNumber, FComplex
 	
 class FGeometricSequence(FIterator):
 	"""
@@ -15,27 +16,59 @@ class FGeometricSequence(FIterator):
 	@abstractmethod
 	def __init__(self):
 		pass
+	def __init__(self, start=None, end=None, step=None, *, _current=None, call=FNumber):
+		if start is None:
+			start = 1
+		
+		if step is None:
+			if end is None or (end > 0 and start > 0 and end >= start) or (end < 0 and start < 0 and end <= start):
+				step = 2
+			elif (end > 0 and start > 0 and end <= start) or (end < 0 and start < 0 and end >= start):
+				step = Fraction(1,2)
+			elif ((end < 0 and start > 0) or (end > 0 and start < 0)) and abs(end) >= abs(start):
+				step = -2
+			else:
+				step = Fraction(-1,2)
+		elif step is not None and end is not None:
+			# if end is given, it must eventually be reached
+			if abs(end) < abs(start):
+				if abs(step) >= 1:
+					raise ValueError("Invalid sequence(start=%r,end=%r,step=%r)"%(start, end, step))
+			elif abs(end) > abs(start):
+				if abs(step) <= 1:
+					raise ValueError("Invalid sequence(start=%r,end=%r,step=%r)"%(start, end, step))
+			else:
+				pass #empty sequence is not an error
+		
+		self.start = start
+		self.end = end if end is not None else None
+		self.step = step
+		self._inf = (end is None)
+		self._current = self.start if _current is None else _current # for copying
+		self.call = call
 	def __next__(self):
-		print(self.start, self.end, self.step, self._current, self._inf)
+		#print(self.start, self.end, self.step, self._current, self._inf)
 		if self.end is None:
 			ret = self._current
-			self._current = self.type(self._current * self.step)
-			return self.type(ret)
+			self._current = self._current * self.step
+			return self.call(ret)
 		else:
 			if abs(self.step) > 1: # 1, 2, 4 or -1, -2, -4 or -1, 2, -4
 				if abs(self._current) >= abs(self.end):
 					raise StopIteration
 				ret = self._current
 				self._current *= self.step
-				return self.type(ret)
+				return self.call(ret)
 			elif 0 < abs(self.step) < 1: # 4, 2, 1 or -4, -2, -1 or -4, 2, -1
 				if abs(self._current) <= abs(self.end):
 					raise StopIteration
 				ret = self._current
 				self._current *= self.step
-				return self.type(ret)
+				return self.call(ret)
 			else:
 				raise ValueError(self.step)
+	def copy(self):
+		return type(self)(self.start, self.end, self.step, _current=self._current, call=self.call)
 	
 class FGeometricIntegerSequence(FGeometricSequence):
 	type = fnumeric.FInteger

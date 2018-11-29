@@ -1,7 +1,8 @@
 import inspect
 
 from fobject import FObject
-from fiter import FIterable, FIterator, FInfiniteIteratorProxy
+from fiter import FIterable, FIterator, FInfiniteIteratorProxy, FIteratorIndex
+from faseq import FArithmeticSequence
 
 
 class FList(FIterable):
@@ -51,11 +52,37 @@ class FList(FIterable):
 				return self.list[index]
 		#elif isinstance(index, FSlice):
 		#	return index.slice(self.copy())
+		elif isinstance(index, slice):
+			if not self._inf:
+				indices = index.indices(len(self))
+				return type(self)(FIteratorIndex(self, FArithmeticSequence(*indices)))
+			elif index.start is None:
+				if index.stop is None:
+					if index.step is None:
+						return self.copy()
+					elif index.step >= 0:
+						return type(self)(FIteratorIndex(self, FArithmeticSequence(step=index.step)))
+					else: # invalid
+						raise ValueError("Cannot use negative step on infinite list without specifying positive start")
+				elif index.stop >= 0:
+					if index.step is None or index.step >= 0:
+						return type(self)(FIteratorIndex(self, FArithmeticSequence(end=index.stop, step=index.step)))
+					else:
+						raise ValueError("Cannot use negative step on infinite list without specifying positive start")
+				else:
+					raise IndexError("negative slice stop of infinite FList")
+			elif index.start >= 0:
+				if index.stop is None:
+					return type(self)(FIteratorIndex(self, FArithmeticSequence(start=index.start, step=index.step)))
+				elif index.stop >= 0:
+					return type(self)(FIteratorIndex(self, FArithmeticSequence(start=index.start, end=index.stop, step=index.step)))
+				else:
+					raise IndexError("negative slice stop of infinite FList")
+			else:
+				raise IndexError("negative slice start of infinite FList")
 		elif hasattr(index, "__iter__"):
 			if hasattr(index, "_inf") and index._inf:
-				_self = self.copy()
-				_index = index.copy()
-				return type(self)(FInfiniteIteratorProxy(_self[i] for i in _index))
+				return type(self)(FIteratorIndex(self, index))
 			else:
 				return type(self)(self[i] for i in index)
 		else:
@@ -126,7 +153,7 @@ class FList(FIterable):
 			
 	def copy(self):
 		if self.gen:
-			out = type(self)(self.gen.copy(), self._inf)
+			out = type(self)(self.gen.copy())
 			# self.gen is None or an Fiterator that hasn't been depleted
 		else:
 			out = type(self)()
@@ -153,7 +180,7 @@ class FList(FIterable):
 
 class FListIterator(FIterator):
 	def __init__(self, ls, *, _index=0):
-		self.ls = ls
+		self.ls = ls.copy()
 		self._inf = hasattr(ls, "_inf") and ls._inf
 		self._index = _index
 	def __next__(self):

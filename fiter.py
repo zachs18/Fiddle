@@ -42,7 +42,7 @@ class FIteratorProxy(FIterator):
 		return self.call(next(self.it))
 	def copy(self):
 		if hasattr(self.it, 'copy'):
-			return FIteratorProxy(self.it.copy())
+			return FIteratorProxy(self.it.copy(), call=self.call)
 		raise TypeError("Python iterators cannot be copied")
 
 class FInfiniteIteratorProxy(FIteratorProxy):
@@ -88,7 +88,7 @@ class FIteratorZip(FIterator):
 		return self.call(*ret)
 	def copy(self):
 		if all(hasattr(it, 'copy') for it in self.its):
-			return FIteratorZip(*(it.copy() for it in self.its), _inf=self._inf, longest=self.longest, default=self.default)
+			return FIteratorZip(*(it.copy() for it in self.its), call=self.call, _inf=self._inf, longest=self.longest, default=self.default)
 		raise TypeError("Python iterators cannot be copied")
 		
 class FIteratorConcatenate(FIterator):
@@ -109,8 +109,50 @@ class FIteratorConcatenate(FIterator):
 				raise StopIteration
 	def copy(self):
 		if all(hasattr(it, 'copy') for it in self.its[self._index:]):
-			return FIteratorConcatenate(*(it.copy() for it in self.its[self._index:]), _inf=self._inf)
+			return FIteratorConcatenate(*(it.copy() for it in self.its[self._index:]), call=self.call, _inf=self._inf)
 		raise TypeError("Python iterators cannot be copied")
 			
+class FIteratorIndex(FIterator):
+	def __init__(self, lst, index, call=(lambda x:x), _inf=False):
+		self.list = lst.copy()
+		self.index = iter(index)
+		self._inf = _inf or (hasattr(index, "_inf") and index._inf)
+		self.call = call
+	def __next__(self):
+		return self.call(self.list[next(self.index)])
+	def copy(self):
+		if all(hasattr(it, 'copy') for it in [self.list, self.index]):
+			return FIteratorIndex(self.list, self.index, _inf=self._inf)
+		raise TypeError("Python iterators cannot be copied")
 	
+class FIteratorRepeat(FIterator):
+	def __init__(self, it, count=None, call=(lambda x:x), _inf=False, _current=None, _index=0):
+		self.it = it
+		self._inf = _inf or (hasattr(it, "_inf") and it._inf) or (count is None)
+		self.count = count
+		self._index = _index
+		if hasattr(it, 'copy'):
+			self._current = it.copy() if _current is None else _current.copy()
+		else:
+			raise TypeError("Python iterators cannot be copied (and therefore repeated)")
+		try:
+			next(it.copy())
+		except StopIteration:
+			if self.count is not None:
+				self._index = count # so we dont loop in next
+			else:
+				raise ValueError("Cannot repeat empty list indefnitely")
+		self.call = call
+	def __next__(self):
+		while True:
+			if self.count is not None and self._index >= self.count:
+				raise StopIteration
+			try:
+				return self.call(next(self._current))
+			except StopIteration:
+				self._current = self.it.copy()
+				self._index += 1	
+	def copy(self):
+		return FIteratorRepeat(self.it, count=self.count, call=self.call, _inf=self._inf, _current=self._current, _index=self._index)
+		#raise TypeError("Python iterators cannot be copied") # .copy is a requirement for FIteratorRepeat
 	
