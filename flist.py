@@ -51,13 +51,13 @@ class FList(FIterable):
 				return self.list[index]
 		#elif isinstance(index, FSlice):
 		#	return index.slice(self.copy())
-		#elif hasattr(index, "__iter__"):
-		#	if hasattr(index, "_inf") and index._inf:
-		#		_self = self.copy()
-		#		_index = index.copy()
-		#		return FList(FInfiniteIteratorProxy(_self[i] for i in _index))
-		#	else:
-		#		return FList(self[i] for i in index)
+		elif hasattr(index, "__iter__"):
+			if hasattr(index, "_inf") and index._inf:
+				_self = self.copy()
+				_index = index.copy()
+				return type(self)(FInfiniteIteratorProxy(_self[i] for i in _index))
+			else:
+				return type(self)(self[i] for i in index)
 		else:
 			raise TypeError(index)
 		#TODO: slicing, listing

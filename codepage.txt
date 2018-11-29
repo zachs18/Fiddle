@@ -134,7 +134,7 @@ z, 0x7a, 0x7a:
 ≠, 0x80, 0x2260: basic, 2, 1: not equal to
 ≤, 0x81, 0x2264: basic, 2, 1: less than or equal to
 ≥, 0x82, 0x2265: basic, 2, 1: greater than or equal to
- , 0x83, 0xTBD: TBD
+→, 0x83, 0x2192: https://en.wikipedia.org/wiki/Arrows_(Unicode_block) sequences (arith or geom)
  , 0x84, 0xTBD: TBD
  , 0x85, 0xTBD: TBD
  , 0x86, 0xTBD: TBD

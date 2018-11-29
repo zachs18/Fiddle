@@ -1,7 +1,7 @@
 import re
 
 from parse import FToken, FParser, FParserSingleton
-from fstring import FChar, FBytes, FString, FUnicode, FBytes
+from fstring import FChar, FByte, FString, FUnicode, FBytes
 from stack import Stack
 from encoding import page, cmd_ord
 
