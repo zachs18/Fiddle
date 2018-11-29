@@ -142,6 +142,14 @@ class FList(FIterable):
 			return '[' + ', '.join(str(i) for i in self.list) + ']'
 		else:
 			return '[]'
+	def __repr__(self):
+		if self._inf:
+			self._fill(5)
+			return '[' + ', '.join(str(i) for i in self.list) + ', ...]'
+		elif len(self) > 0:
+			return '[' + ', '.join(str(i) for i in self.list) + ']'
+		else:
+			return '[]'
 
 class FListIterator(FIterator):
 	def __init__(self, ls, *, _index=0):

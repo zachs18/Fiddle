@@ -140,9 +140,9 @@ class FUnicode(FString):
 			self.list = [FChar(c) for c in contents.decode()]
 			self.gen = None
 			self._inf = False
-		elif isinstance(contents, FIterator) and contents._inf:
+		elif isinstance(contents, FIterable) and contents._inf:
 			self.list = []
-			self.gen = FInfiniteIteratorProxy(contents, call=FChar)
+			self.gen = FInfiniteIteratorProxy(iter(contents), call=FChar)
 			self._inf = True
 		elif hasattr(contents, "__iter__"):
 			self.list = [FChar(c) for c in contents]
@@ -155,11 +155,15 @@ class FUnicode(FString):
 		else:
 			raise TypeError("%r cannot be converted to FUnicode" % contents)
 	def __str__(self):
-		self._fill()
-		return ''.join(str(i) for i in self)
+		if self._inf:
+			self._fill(20)
+			return '"' + ''.join(repr(i) for i in self.list) + '..."'
+		return '"' + ''.join(repr(i) for i in self.list) + '"'
 	def __repr__(self):
-		self._fill()
-		return '"' + ''.join(repr(i) for i in self) + '"'
+		if self._inf:
+			self._fill(20)
+			return '"' + ''.join(repr(i) for i in self.list) + '..."'
+		return '"' + ''.join(repr(i) for i in self.list) + '"'
 	def _encode(self, encoding='utf-8', errors='strict'): # iterator
 		for c in self:
 			yield from c.encode(encoding, errors)

@@ -85,7 +85,7 @@ class FWhitespaceParser(FParserSingleton):
 		return [], length
 #whitespace = FWhitespaceParser()
 
-def parse_one(s):
+def parse_one(s: AnyStr) -> Tuple[List[FToken], int, AnyStr]:
 	"""
 	Return a tuple: ([tokens,], length used, rest of source)
 	"""
@@ -124,3 +124,4 @@ import parselist
 import stack_manipulation
 import vectorized
 import stringparse
+import fsequencecommands
