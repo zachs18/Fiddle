@@ -4,12 +4,14 @@ from fcommand import FCommandParserFactory, FStackCommandParserFactory
 from fnumeric import FNumber, FReal, FInteger, FFloat, FRational, FComplex, FBool
 from fstring import FString, FUnicode, FBytes, FChar, FByte
 from flist import FList
-from fiter import FIterable, FIteratorConcatenate
+from fiter import FIterable, FIteratorConcatenate, FIteratorZip
 
 @FCommandParserFactory('+', 2, 1)
 def add(a, b):
 	if isinstance(a, FNumber) and isinstance(b, FNumber):
 		return a + b
+	elif isinstance(a, FIterable) and isinstance(b, FIterable):
+		return FList(FIteratorZip(iter(a), iter(b), call=add.func))
 	else:
 		raise TypeError(a, b)
 

@@ -124,4 +124,4 @@ import parselist
 import stack_manipulation
 import vectorized
 import stringparse
-import fsequencecommands
+import faseqbasiccommands

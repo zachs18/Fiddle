@@ -115,7 +115,7 @@ class FIteratorConcatenate(FIterator):
 class FIteratorIndex(FIterator):
 	def __init__(self, lst, index, call=(lambda x:x), _inf=False):
 		self.list = lst.copy()
-		self.index = iter(index)
+		self.index = iter(index.copy())
 		self._inf = _inf or (hasattr(index, "_inf") and index._inf)
 		self.call = call
 	def __next__(self):
@@ -131,10 +131,15 @@ class FIteratorRepeat(FIterator):
 		self._inf = _inf or (hasattr(it, "_inf") and it._inf) or (count is None)
 		self.count = count
 		self._index = _index
-		if hasattr(it, 'copy'):
+		if isinstance(it, FObject):
+			self._current = it.copy() if _current is None else _current.copy()
+		elif hasattr(it, "__len__"):
+			it = self.it = iter(flist.FList(it))
+			print(it, 44)
 			self._current = it.copy() if _current is None else _current.copy()
 		else:
 			raise TypeError("Python iterators cannot be copied (and therefore repeated)")
+		print(it,65)
 		try:
 			next(it.copy())
 		except StopIteration:

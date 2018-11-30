@@ -2,6 +2,8 @@ import re
 
 from parse import FToken, FParser, FParserSingleton, parse, parse_one
 from fcommand import CallType, FCommandToken, FCommandParser
+from fiter import FIterable, FIteratorZip, FIteratorRepeat
+from flist import FList
 from stack import Stack
 import state
 
@@ -12,8 +14,22 @@ class FVectorizedCommandToken(FCommandToken):
 		self.func = cmdtok.func
 		print(self.func)
 		self.depth = depth
+	def _apply(self, *args):
+		lengths = [-1 for _ in args]
+		for i in range(len(args)):
+			if isinstance(args[i], FIterable):
+				lengths[i] = args[i].length()
+		if all(i == -1 for i in lengths):
+			return self.func(*args)
+		elif len(set(lengths) - {-1}) > 1: # More than one length iterable
+				raise ValueError("Multiple iterator lengths", lengths, args)
+		else:
+			return FList(FIteratorZip(((args[i] if lengths[i] != -1 else FIteratorRepeat([args[i]])) for i in range(len(args))), call=self._apply))
 	def apply(self, stack):
-		pass
+		if self.call[0] == CallType.basic:
+			args = stack.popn(self.call[1])
+			ret = self._apply(*args)
+			stack.push(ret)
 	def __repr__(self):
 		return "FVectorizedCommandToken(" + ("v"*self.depth if self.depth < float('inf') else 'V') + self.cmdtok.name + ")"
 
