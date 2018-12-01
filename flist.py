@@ -14,6 +14,7 @@ class FList(FIterable):
 		elif isinstance(contents, FIterator):
 			try:
 				self.list = []
+				print(contents)
 				self.gen = contents.copy()
 				self._inf = self.gen._inf
 			except TypeError: # python iterators cannot be copied and FIterator.copy() raises a TypeError for this

@@ -45,10 +45,10 @@ def cmd_ord(bs):
 	# error or special encoding (int literal, etc)
 	return -1, 0
 		
-def encode(char):
-	if char in page:
-		return bytes([page.find(char)])
-	code = ord(char)
+def encode(char_or_code):
+	if isinstance(char_or_code, str) and char_or_code in page:
+		return bytes([page.find(char_or_code)])
+	code = ord(char_or_code) if isinstance(char_or_code, str) else char_or_code
 	if code < 8192:
 		return bytes([192 + code//256, code%256])
 	elif code < 1048576:

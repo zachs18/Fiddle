@@ -91,7 +91,7 @@ class FCommandParser(FParser):
 		
 	def match(self, s):
 		if isinstance(s, str):
-			if s[:len(self.name)] == self.name:
+			if s.startswith(self.name):
 				return len(self.name) # len(self.name) characters
 			else:
 				return 0 # no match

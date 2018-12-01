@@ -114,9 +114,29 @@ class FChar(FInteger):
 			raise ValueError(encoding)
 	def __iter__(self):
 		return FListIterator([self])
-		
-		
-	
+
+class FUnicodeDecodeIterator(FIterator):
+	def __init__(self, s, encoding, errors, _index=0, _backlog=tuple()):
+		self.s = s.copy()
+		self._inf = s._inf
+		self.encoding = encoding
+		self.errors = errors
+		self._index = _index
+		self._backlog = _backlog
+	def copy(self):
+		return type(self)(self.s, self.encoding, self.errors, self._index, self._backlog)
+	def __next__(self):
+		if self._backlog:
+			ret, *self._backlog = self._backlog
+			return ret
+		try:
+			bs = tuple(self.s[self._index].encode(self.encoding, self.errors))
+			ret, *self._backlog = bs
+			self._index += 1
+			return ret
+		except IndexError:
+			raise StopIteration
+
 class FUnicode(FString):
 	def __init__(self, contents=None):
 		if contents is None:
@@ -164,17 +184,16 @@ class FUnicode(FString):
 			self._fill(20)
 			return '"' + ''.join(repr(i) for i in self.list) + '..."'
 		return '"' + ''.join(repr(i) for i in self.list) + '"'
-	def _encode(self, encoding='utf-8', errors='strict'): # iterator
+	def _encode_generator(self, encoding='utf-8', errors='strict'): # iterator
 		for c in self:
 			yield from c.encode(encoding, errors)
-	def encode(self, encoding='utf-8', errors = 'strict'):
+	def _encode(self, encoding='utf-8', errors='strict'): # only use a python generator if not self._inf
 		if self._inf:
-			return FBytes(FInfiniteIteratorProxy(self.copy._encode(encoding, errors)))
+			return FUnicodeDecodeIterator(self, encoding, errors)
 		else:
-			return FBytes(self._encode(encoding, errors))
-		
-			
-		
+			return self._encode_generator(encoding, errors)
+	def encode(self, encoding='utf-8', errors = 'strict'):
+		return FBytes(self._encode(encoding, errors))
 	
 class FByte(FInteger):
 	def __init__(self, value='\x00'):
@@ -243,9 +262,16 @@ class FBytes(FString):
 		else:
 			raise TypeError("%r cannot be converted to FUnicode" % contents)
 	def __repr__(self):
-		self._fill()
-		return 'b"' + ''.join(repr(i)[2:-1] for i in self) + '"' # [2:-1] to get rid of b''
-	def _decode(self, encoding, errors): # iterator
+		if self._inf:
+			self._fill(20)
+			return 'b"' + ''.join(repr(i)[2:-1] for i in self.list) + '..."'
+		return 'b"' + ''.join(repr(i)[2:-1] for i in self.list) + '"' # [2:-1] to get rid of b''
+	def __str__(self):
+		if self._inf:
+			self._fill(20)
+			return 'b"' + ''.join(repr(i)[2:-1] for i in self.list) + '..."'
+		return 'b"' + ''.join(repr(i)[2:-1] for i in self.list) + '"' # [2:-1] to get rid of b''
+	def _decode_generator(self, encoding='utf-8', errors='strict'): # iterator
 		i=0
 		if encoding == 'utf-8':
 			def decode_rest(self, start, length): # start is i+1, length is the length left, so 1 for starting 2-byte
@@ -379,7 +405,7 @@ class FBytes(FString):
 						i += 4
 					elif self[i].value == 0b11111000: # integer encoding
 						i += 1
-						head = bs[i].value
+						head = self[i].value
 						for j in range(9):
 							if head >= 256-2**j:
 								length = 9-j # 7 -> 2, 6 -> 3
@@ -404,12 +430,8 @@ class FBytes(FString):
 						raise StopIteration
 					else:
 						raise ValueError("multibyte sequence interrupted by end-of-sequence")
-				
-					
-						
-			
 	def decode(self, encoding='utf-8', errors='strict'):
 		if self._inf:
-			return FBytes(FInfiniteIteratorProxy(self.copy._decode()))
+			return FUnicode(FInfiniteIteratorProxy(self.copy()._decode(encoding, errors)))
 		else:
-			return FBytes(self._decode())
+			return FUnicode(self._decode(encoding, errors))

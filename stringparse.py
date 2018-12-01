@@ -3,7 +3,7 @@ import re
 from parse import FToken, FParser, FParserSingleton
 from fstring import FChar, FByte, FString, FUnicode, FBytes
 from stack import Stack
-from encoding import page, cmd_ord
+from encoding import page, cmd_ord, encode
 
 class FCharToken(FToken):
 	def __init__(self, value):
@@ -157,4 +157,104 @@ class FUnicodeParser(FParserSingleton):
 		if not length:
 			raise ValueError
 		return FUnicodeToken(tokens, s[:length]), length
-		
+
+
+class FBytesParser(FParserSingleton):
+	@classmethod
+	def _match(cls, s):
+		_s = s
+		if isinstance(s, str):
+			start = "'"
+			end = "'"
+			newline = '\n'
+			escape = '\\'
+			if not s.startswith(start):
+				return [], 0
+			length = len(start)
+			s = s[len(start):]
+			tokens = []
+			while s and (not s.startswith(end)) and (not s.startswith(newline)):
+				#print(s)
+				if not s.startswith(escape):
+					for byte in s[0].encode():
+						tokens.append(FByteToken(byte))
+					s = s[1:]
+					length += 1
+				else:
+					s = s[len(escape):]
+					s += len(escape)
+					if not s: # no more characters
+						tokens.append(FCharToken(escape))
+					elif s.startswith('\n'): # pass
+						s = s[1:]
+						length += 1
+					elif s.startswith('n'):
+						tokens.append(FByteToken(b'\n'))
+						s = s[1:]
+						length += 1
+					elif s.startswith(end):
+						for byte in end:
+							tokens.append(FByteToken(byte))
+						s = s[len(end):]
+						length += len(end)
+					else:
+						for byte in escape:
+							tokens.append(FByteToken(byte))
+						s = s[len(escape):]
+						length += len(escape)
+			if s and s.startswith(end): # newlines are not 'eaten', closing quotes are
+				length += len(end)
+				s = s[len(end):]
+			return tokens, length
+						
+		else:
+			start = page.find("'")
+			end = page.find("'")
+			newline = page.find('\n')
+			escape = page.find('\\')
+			ordinal, length = cmd_ord(s)
+			if ordinal != start:
+				return [], 0
+			s = s[length:]
+			tokens = []
+			while s and s[0] != end and s[0] != newline:
+				if s[0] != escape:
+					tokens.append(FByteToken(s[0]))
+					s = s[1:]
+					length += 1
+				else:
+					s = s[1:]
+					length += 1
+					if not s: # no more bytes
+						tokens.append(FByteToken(escape))
+					elif s[0] == newline:
+						pass
+						s = s[1:]
+					elif s[0] == page.find('n'):
+						tokens.append(FByteToken('\n'))
+						s = s[1:]
+					elif s[0] == end:
+						tokens.append(FByteToken(end))
+						s = s[1:]
+					else: # \(fiddle char) -> char.encode('utf-8')
+						ordinal, l = cmd_ord(s)
+						for byte in encode(ordinal):
+							tokens.append(FByteToken(byte))
+						tokens.append(FByteToken(s[0]))
+						s = s[l:]
+			if s and s.startswith(bytes([end])): # newlines are not 'eaten', closing quotes are
+				length += 1
+				s = s[1:]
+			return tokens, length
+	@classmethod
+	def match(cls, s):
+		# returns length
+		_, length = cls._match(s)
+		return length
+	@classmethod
+	def parse(cls, s):
+		tokens, length = cls._match(s)
+		if not length:
+			raise ValueError
+		return FBytesToken(tokens, s[:length]), length
+	
