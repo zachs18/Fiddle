@@ -24,7 +24,15 @@ class FVectorizedCommandToken(FCommandToken):
 		elif len(set(lengths) - {-1}) > 1: # More than one length iterable
 				raise ValueError("Multiple iterator lengths", lengths, args)
 		else:
-			return FList(FIteratorZip(((args[i] if lengths[i] != -1 else FIteratorRepeat([args[i]])) for i in range(len(args))), call=self._apply))
+			return FList(
+				FIteratorZip(
+					*(
+						(
+							args[i] if lengths[i] != -1 else FIteratorRepeat([args[i]])
+						) for i in range(len(args))
+					), call=self._apply
+				)
+			)
 	def apply(self, stack):
 		if self.call[0] == CallType.basic:
 			args = stack.popn(self.call[1])
