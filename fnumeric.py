@@ -65,7 +65,7 @@ class FNumber(FObject, numbers.Number):
 		"complex number times its conjugate"
 		return self.real*self.real + self.imag*self.imag
 	def __bool__(self):
-		return self == 0
+		return self != 0
 	def eq(self, other):
 		return FBool(self == other)
 	def ne(self, other):

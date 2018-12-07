@@ -10,7 +10,7 @@ class FArithmeticSequence(FIterator):
 	If end is None, the sequence is infinite.
 	If end is not None, the sequence will be bounded by it (end will not be part of the sequence)
 	"""
-	def __new__(cls, start=None, end=None, step=None, *, _current=None, call=FNumber, inclusive=False):
+	def __new__(cls, start=None, end=None, step=None, length=None, *, _current=None, _index=0, call=FNumber, inclusive=False):
 		if cls is not FArithmeticSequence:
 			return object.__new__(cls)
 		if isinstance(start, (complex, FComplex)) or \
@@ -20,7 +20,7 @@ class FArithmeticSequence(FIterator):
 		else:
 			return object.__new__(cls)
 	
-	def __init__(self, start=None, end=None, step=None, *, _current=None, call=FNumber, inclusive=False):
+	def __init__(self, start=None, end=None, step=None, length=None, *, _current=None, _index=0, call=FNumber, inclusive=False):
 		if start is None:
 			start = 0
 		
@@ -43,31 +43,38 @@ class FArithmeticSequence(FIterator):
 		self.start = start
 		self.end = end if end is not None else None
 		self.step = step
-		self._inf = (end is None)
+		self._inf = (end is None) and (length is None)
+		self.length = length
+		self._index = _index
 		self._current = self.start if _current is None else _current # for copying
 		self.call = call
 		self.inclusive = inclusive
 	def __next__(self):
 		#print(self.start, self.end, self.step, self._current, self._inf)
 		if self.end is None:
+			if self.length is not None and self._index >= self.length:
+				raise StopIteration
+			self._index += 1
 			ret = self._current
 			self._current += self.step
 			return self.call(ret)
 		else:
 			if self.step > 0:
-				if self._current > self.end or (not self.inclusive and self._current == self.end):
+				if self._current > self.end or (not self.inclusive and self._current == self.end) or (self.length is not None and self._index >= self.length):
 					raise StopIteration
+				self._index += 1
 				ret = self._current
 				self._current += self.step
 				return self.call(ret)
 			else:
-				if self._current < self.end or (not self.inclusive and self._current == self.end):
+				if self._current < self.end or (not self.inclusive and self._current == self.end) or (self.length is not None and self._index >= self.length):
 					raise StopIteration
+				self._index += 1
 				ret = self._current
 				self._current += self.step
 				return self.call(ret)
 	def copy(self):
-		return type(self)(self.start, self.end, self.step, _current=self._current, call=self.call, inclusive=self.inclusive)
+		return type(self)(self.start, self.end, self.step, self.length, _current=self._current, _index=self._index, call=self.call, inclusive=self.inclusive)
 
 class FArithmeticComplexSequence(FArithmeticSequence):
 	"""
@@ -80,7 +87,7 @@ class FArithmeticComplexSequence(FArithmeticSequence):
 		[2] -2
 		[3] -6 # only if inclusive
 	"""
-	def __init__(self, start=None, end=None, step=None, *, _current=None, call=FNumber, inclusive=False):
+	def __init__(self, start=None, end=None, step=None, length=None, *, _current=None, _index=0, call=FNumber, inclusive=False):
 		if start is not None and not isinstance(start, FNumber):
 			start = FNumber(start)
 		if end is not None and not isinstance(end, FNumber):
@@ -113,27 +120,36 @@ class FArithmeticComplexSequence(FArithmeticSequence):
 		self.start = start
 		self.end = end if end is not None else None
 		self.step = step
-		self._inf = (end is None)
+		self._inf = (end is None) and (length is None)
+		self.length = length
+		self._index = _index
 		self._current = self.start if _current is None else _current # for copying
 		self.call = call
 		self.inclusive = inclusive
 	def __next__(self):
 		#print(self.start, self.end, self.step, self._current, self._inf)
 		if self.end is None:
+			if self.length is not None and self._index >= self.length:
+				raise StopIteration
+			self._index += 1
 			ret = self._current
 			self._current += self.step
 			return self.call(ret)
 		else:
 			if self.start.norm() < self.end.norm(): # norm to avoid float precision issues if the components arent floats
-				if self._current.norm() > self.end.norm() or (not self.inclusive and self._current.norm() == self.end.norm()):
+				if self._current.norm() > self.end.norm() or (not self.inclusive and self._current.norm() == self.end.norm()) or \
+					(self.length is not None and self._index >= self.length):
 					raise StopIteration
+				self._index += 1
 				ret = self._current
 				self._current += self.step
 				return self.call(ret)
 			else:
 				if self._current.norm() < self.end.norm() or (not self.inclusive and self._current.norm() == self.end.norm()) or \
-					(self._current != self.start and (self._current.norm() > self.start.norm() or (not self.inclusive and self._current.norm() == self.start.norm()))):
+					(self._current != self.start and (self._current.norm() > self.start.norm() or (not self.inclusive and self._current.norm() == self.start.norm()))) or \
+					(self.length is not None and self._index >= self.length):
 					raise StopIteration
+				self._index += 1
 				ret = self._current
 				self._current += self.step
 				return self.call(ret)
