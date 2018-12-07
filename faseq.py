@@ -10,6 +10,16 @@ class FArithmeticSequence(FIterator):
 	If end is None, the sequence is infinite.
 	If end is not None, the sequence will be bounded by it (end will not be part of the sequence)
 	"""
+	def __new__(cls, start=None, end=None, step=None, *, _current=None, call=FNumber, inclusive=False):
+		if cls is not FArithmeticSequence:
+			return object.__new__(cls)
+		if isinstance(start, (complex, FComplex)) or \
+			isinstance(end, (complex, FComplex)) or \
+			isinstance(step, (complex, FComplex)):
+			return object.__new__(FArithmeticComplexSequence)
+		else:
+			return object.__new__(cls)
+	
 	def __init__(self, start=None, end=None, step=None, *, _current=None, call=FNumber, inclusive=False):
 		if start is None:
 			start = 0

@@ -11,7 +11,7 @@ lines = [
 	"@ABCDEFGHIJKLMNO", # 0x4_
 	"PQRSTUVWXYZ[\\]^_", # 0x5_
 	"`abcdefghijklmno", # 0x6_
-	"pqrstuvwxyz{|}~ ", # 0x7_
+	"pqrstuvwxyz{|}~\u0305", # 0x7_ # 0x7f is combining overbar
 	"≠≤≥→↣↦↠⇉⇶↑↥↟⇈   ", # 0x8_
 	"                ", # 0x9_
 	" ¡¢£¤¥¦§¨©ª«¬ ®¯", # 0xa_

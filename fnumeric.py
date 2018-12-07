@@ -81,6 +81,8 @@ class FNumber(FObject, numbers.Number):
 	@abstractmethod
 	def is_integer(self):
 		pass
+	def sign(self):
+		return self/abs(self) if self else FNumber(0)
 
 
 class FReal(FNumber, numbers.Real):
@@ -161,6 +163,13 @@ class FReal(FNumber, numbers.Real):
 		return FNumber(round(self.value, other))
 	def __trunc__(self, other):
 		return FNumber(self.value.__trunc__(other))
+	def sign(self):
+		if self > 0:
+			return FNumber(1)
+		elif self:
+			return FNumber(-1)
+		else:
+			return FNumber(0)
 
 class FInteger(FReal, numbers.Integral):
 	def __new__(cls, value=0):

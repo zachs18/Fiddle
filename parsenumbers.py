@@ -1,11 +1,13 @@
 import re
 
 from parse import FToken, FParser, FParserFactory
+from encoding import page
 from fnumeric import FNumber, FInteger, FFloat, FRational, FComplex, FBool
 from fractions import Fraction # if state.float_parse is False
 import state
 
-
+overbar_s = '\u0305'
+overbar_b = bytes([page.find(overbar_s)])
 
 class FNumberToken(FToken):
 	def __init__(self, value):
@@ -172,78 +174,87 @@ def _digit_helper(c, base):
 # groups:
 #  0: (-)? : '-' or None
 #     ''/0b/0/0x : base prefix
-#  1: ((<digits>).(<digits>)|.(<digits>))
-#  2:  (<digits>)             : can only start with 0 if 0 is the only digits before \.
-#     (?!<digit>) : make sure the parser doesn't stop short (non-capturing group) #TODO: not needed
-#  2: (e([+-]?\d+)) : scientific-notation exponent
-#  3:   ([+-]?\d+) : the actual number for the power
+#  1: (<digits>).                         : integral part
+#  2:            (<digits>)              : fractional part (optional)
+#  3:                      (\u0305(<digits>)) : repeated fractional part
+#  4:                             (<digits>)  : digits of repeated fractional part
+#  5: (e([+-]?\d+)) : scientific-notation exponent
+#  6:   ([+-]?\d+) : the actual number for the power
 def float_parser(match, base):
 	groups = match.groups()
 	if groups[0]:
-		num = -1
+		sign = -1
 	else:
-		num = 1
+		sign = 1
 	power = 0
-	if groups[2]: # has an integer part (even if 0)
-		num *= int(groups[2], base)
-		for c in groups[3]: # each char in the fractional part
-			num = base*num + _digit_helper(c, base)
-			power -= 1
-	else: # groups[4] # no integer part
-		num = int(groups[4], base)
-		power -= len(groups[4])
+	if groups[1]: # has an integer part (even if 0)
+		num = int(groups[1], base)
+		if groups[2]:
+			num = num*base**len(groups[2]) + int(groups[2], base)
+			power -= len(groups[2])
+		if groups[4]:
+			num += Fraction(int(groups[4], base), base**len(groups[4])-1)
+	elif groups[2]: # no integer part
+		num = int(groups[2], base)
+		power -= len(groups[2])
+		if groups[4]:
+			num += Fraction(int(groups[4], base), base**len(groups[4])-1)
+	elif groups[4]: # no integer OR finite fractional part
+		num = Fraction(int(groups[4], base), base**len(groups[4])-1)
+	else:
+		num = 0
 	if groups[6]:
 		power += int(groups[6])
 	if power >= 0:
 		num *= base**power
-	elif state.float_parse:
 		num /= base**(-power) # e.g. 51/10 != 51*0.1 because 0.1 != 1/10
 	else:
 		num *= Fraction(1, base**(-power))
-	return FNumberToken(FNumber(num))
+	if state.float_parse and num % 1:
+		return FNumberToken(FFloat(sign*num))
+	else:
+		return FNumberToken(FNumber(sign*num))
 	
 
-#decimal_float_s_re = re.compile( r'(-)?(\d+\.\d*|\d*\.\d+)(?!\d)(e([+-]?\d+))?')
+#decimal_float_s_re = re.compile( r'(-)?(\d+\.\d*|\d*\.\d+)(e([+-]?\d+))?')
 # this ^ one matches 001. etc
-decimal_float_s_re = re.compile( r'(-)?(?!0\d)((\d+)\.(\d*)|\.(\d+))(?!\d)(e([+-]?\d+))?')
-decimal_float_b_re = re.compile(br'(-)?(?!0\d)((\d+)\.(\d*)|\.(\d+))(?!\d)(e([+-]?\d+))?')
+decimal_float_s_re = re.compile( r'(-)?(?!0\d)(\d*)\.(\d*)('+overbar_s+ r'(\d+))?(e([+-]?\d+))?')
+decimal_float_b_re = re.compile(br'(-)?(?!0\d)(\d*)\.(\d*)('+overbar_b+br'(\d+))?(e([+-]?\d+))?')
 # (-)? : '-' if negative, None if not
+# (?!0\d) : do not match possible octal
 # (\d+\.\d*|\d*\.\d+) : floating point decimal number with at leas one (possibly zero) digit
-# (?!\d) : ... not followed by another digit
 # (e([+-]?\d+))? : optional 10-based, base-10 exponent 
 @FNumberParserFactory('decimal_float', decimal_float_s_re, decimal_float_b_re)
 def decimal_float_parser(match):
 	return float_parser(match, base=10)
 
 
-binary_float_s_re = re.compile( r'(-)?0b(([01]+)\.([01]*)|\.([01]+))(?![01])(e([+-]?\d+))?')
-binary_float_b_re = re.compile(br'(-)?0b(([01]+)\.([01]*)|\.([01]+))(?![01])(e([+-]?\d+))?')
+binary_float_s_re = re.compile( r'(-)?0b([01]*)\.([01]*)('+overbar_s+ r'([01]+))?(e([+-]?\d+))?')
+binary_float_b_re = re.compile(br'(-)?0b([01]*)\.([01]*)('+overbar_b+br'([01]+))?(e([+-]?\d+))?')
 # (-)? : '-' if negative, None if not
 # 0b : '0b'
 # ([01]*) : sequence of binary digits
-# (?![\d\.]) : ... not followed by a radix point or another digit (to not match float representations)
 # (e([+-]?\d+))? : optional 2-based, base-10 exponent
 @FNumberParserFactory('binary_float', binary_float_s_re, binary_float_b_re)
 def binary_float_parser(match):
 	return float_parser(match, base=2)
 
 
-octal_float_s_re = re.compile( r'(-)?0(?!0[1-7])(([0-7]+)\.([0-7]*)|\.([0-7]+))(?![0-7])(e([+-]?\d+))?')
-octal_float_b_re = re.compile(br'(-)?0(?!0[1-7])(([0-7]+)\.([0-7]*)|\.([0-7]+))(?![0-7])(e([+-]?\d+))?')
+octal_float_s_re = re.compile( r'(-)?0([0-7])\.([0-7]*)('+overbar_s+ r'([0-7]+))?(e([+-]?\d+))?')
+octal_float_b_re = re.compile(br'(-)?0([0-7])\.([0-7]*)('+overbar_b+br'([0-7]+))?(e([+-]?\d+))?')
 # (-)? : '-' if negative, None if not
 # 0b : '0b'
 # ([01]*) : sequence of octal digits
-# (?![\d\.]) : ... not followed by a radix point or another digit (to not match float representations)
 # (e([+-]?\d+))? : optional 2-based, base-10 exponent
 @FNumberParserFactory('octal_float_s', octal_float_s_re, octal_float_b_re)
 def octal_float_parser(match):
 	return float_parser(match, base=8)
 
 
-hexadecimal_lower_float_s_re = re.compile( r'(-)?0x(?!0[1-9a-f])(([0-9a-f]+)\.([0-9a-f]*)|\.([0-9a-f]+))(?![0-9a-f])(p([+-]?\d+))?')
-hexadecimal_lower_float_b_re = re.compile(br'(-)?0x(?!0[1-9a-f])(([0-9a-f]+)\.([0-9a-f]*)|\.([0-9a-f]+))(?![0-9a-f])(p([+-]?\d+))?')
-hexadecimal_upper_float_s_re = re.compile( r'(-)?0X(?!0[1-9A-F])(([0-9A-F]+)\.([0-9A-F]*)|\.([0-9A-F]+))(?![0-9A-F])(p([+-]?\d+))?')
-hexadecimal_upper_float_b_re = re.compile(br'(-)?0X(?!0[1-9A-F])(([0-9A-F]+)\.([0-9A-F]*)|\.([0-9A-F]+))(?![0-9A-F])(p([+-]?\d+))?')
+hexadecimal_lower_float_s_re = re.compile( r'(-)?0x([0-9a-f]*)\.([0-9a-f]*)('+overbar_s+ r'([0-9a-f]+))?(p([+-]?\d+))?')
+hexadecimal_lower_float_b_re = re.compile(br'(-)?0x([0-9a-f]*)\.([0-9a-f]*)('+overbar_b+br'([0-9a-f]+))?(p([+-]?\d+))?')
+hexadecimal_upper_float_s_re = re.compile( r'(-)?0X([0-9A-F]*)\.([0-9A-F]*)('+overbar_s+ r'([0-9A-F]+))?(p([+-]?\d+))?')
+hexadecimal_upper_float_b_re = re.compile(br'(-)?0X([0-9A-F]*)\.([0-9A-F]*)('+overbar_b+br'([0-9A-F]+))?(p([+-]?\d+))?')
 #TODO: should upper's exponent 'p' be 'P'?
 # (-)? : '-' if negative, None if not
 # 0x or 0X : '0x' or '0X'
