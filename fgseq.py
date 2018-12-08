@@ -2,12 +2,11 @@ from abc import ABC, abstractmethod
 from fractions import Fraction
 
 from fiter import FIterator
-import fnumeric
-from fnumeric import FNumber, FComplex
+from fnumeric import FNumber, FRational
 	
 class FGeometricSequence(FIterator):
 	"""
-	A sequence with a start(=1), an end(=None), and a step(=2)
+	A sequence with a start(=1), an end(=None), and a step(=2 or 1/2)
 	If end is None, the sequence is infinite.
 	If end is not None, the sequence will be bounded by it (end will not be part of the sequence)
 	Geometric sequences are bounded by absolute value
@@ -16,11 +15,11 @@ class FGeometricSequence(FIterator):
 	
 	def __init__(self, start=None, end=None, step=None, length=None, *, _current=None, _index=0, call=FNumber, inclusive=False):
 		if start is None:
-			start = FInteger(1)
+			start = FNumber(1)
 		
 		if step is None:
 			if end is None or (end.norm() >= start.norm()):
-				step = FInteger(2)
+				step = FNumber(2)
 			else: #if (end.norm() <= start.norm()):
 				step = FRational(1,2)
 		elif step is not None and end is not None:
@@ -54,14 +53,14 @@ class FGeometricSequence(FIterator):
 			return self.call(ret)
 		else:
 			if self.step.norm() > 1: # 1, 2, 4 or -1, -2, -4 or -1, 2, -4
-				if self._current.norm() >= self.end.norm() or (self.length is not None and self._index >= self.length):
+				if self._current.norm() > self.end.norm() or (not self.inclusive and self._current.norm() == self.end.norm()) or (self.length is not None and self._index >= self.length):
 					raise StopIteration
 				self._index += 1
 				ret = self._current
 				self._current *= self.step
 				return self.call(ret)
 			elif 0 < self.step.norm() < 1: # 4, 2, 1 or -4, -2, -1 or -4, 2, -1
-				if self._current.norm() <= self.end.norm() or (self.length is not None and self._index >= self.length):
+				if self._current.norm() < self.end.norm() or (not self.inclusive and self._current.norm() == self.end.norm()) or (self.length is not None and self._index >= self.length):
 					raise StopIteration
 				self._index += 1
 				ret = self._current
